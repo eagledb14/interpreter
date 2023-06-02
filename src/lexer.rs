@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Token {
     Illegal,
     Eof,
