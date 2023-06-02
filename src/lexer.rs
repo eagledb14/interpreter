@@ -8,6 +8,12 @@ pub enum Token {
     Int(String),
     Assign,
     Plus,
+    Minus,
+    Bang,
+    Asterisk,
+    Slash,
+    Lt,
+    Gt,
     Comma,
     Semicolon,
     LParen,
@@ -15,7 +21,15 @@ pub enum Token {
     LBrace,
     RBrace,
     Function,
-    Let
+    Let,
+
+    True, 
+    False,
+    If,
+    Else,
+    Return,
+    Equal,
+    NotEqual,
 }
 
 pub struct Lexer {
@@ -51,11 +65,26 @@ impl Lexer {
         self.read_pos += 1;
     }
 
+    fn peek_char(&self) -> u8 {
+        if self.read_pos >= self.input.len() {
+            return 0;
+        }
+        return self.input[self.read_pos];
+    }
+
     fn next_token(&mut self) -> Result<Token> {
         self.skip_whitespace();
 
         let token = match self.ch {
-            b'=' => Token::Assign,
+            b'=' =>  {
+                if self.peek_char() == b'=' {
+                    self.read_char();
+                    Token::Equal
+                }
+                else {
+                    Token::Assign
+                }
+            },
             b';' => Token::Semicolon,
             b'(' => Token::LParen,
             b')' => Token::RParen,
@@ -63,6 +92,20 @@ impl Lexer {
             b'+' => Token::Plus,
             b'{' => Token::LBrace,
             b'}' => Token::RBrace,
+            b'<' => Token::Lt,
+            b'>' => Token::Gt,
+            b'!' => {
+                if self.peek_char() == b'=' {
+                    self.read_char();
+                    Token::NotEqual
+                }
+                else {
+                    Token::Bang
+                }
+            }
+            b'-' => Token::Minus,
+            b'/' => Token::Slash,
+            b'*' => Token::Asterisk,
             0 => Token::Eof,
             _ => {
                 if self.ch.is_ascii_alphabetic() {
@@ -82,9 +125,7 @@ impl Lexer {
     }
 
     fn skip_whitespace(&mut self) {
-        println!("{}", self.ch);
         while self.ch.is_ascii_whitespace() {
-            println!("-{}", self.ch);
             self.read_char();
         }
     }
@@ -100,6 +141,12 @@ impl Lexer {
         match identifier.as_str() {
             "fn" => Token::Function,
             "let" => Token::Let,
+            "true" => Token::True,
+            "false" => Token::False,
+            "if" => Token::If,
+            "else" => Token::Else,
+            "return" => Token::Return,
+
             val => Token::Ident(val.to_string())
         }
     }
@@ -111,7 +158,6 @@ impl Lexer {
             self.read_char();
         }
 
-        println!("{:?}", &self.input);
         return Token::Int(String::from_utf8_lossy(&self.input[pos..self.pos]).to_string());
     }
 
@@ -208,6 +254,95 @@ mod tests {
         }
 
         return Ok(());
+    }
+
+
+    #[test]
+    fn test_extended_tokens() -> Result<()> {
+        let input = r#"!-/*5;
+        5 < 10 > 5;
+        10 == 10;
+        10 != 9;
+        "#;
+        
+        let mut lexer = Lexer::new(input.to_string());
+
+        let test_tokens = [
+            Token::Bang,
+            Token::Minus,
+            Token::Slash,
+            Token::Asterisk,
+            Token::Int("5".to_string()),
+            Token::Semicolon,
+            Token::Int("5".to_string()),
+            Token::Lt,
+            Token::Int("10".to_string()),
+            Token::Gt,
+            Token::Int("5".to_string()),
+            Token::Semicolon,
+
+            Token::Int("10".to_string()),
+            Token::Equal,
+            Token::Int("10".to_string()),
+            Token::Semicolon,
+            Token::Int("10".to_string()),
+            Token::NotEqual,
+            Token::Int("9".to_string()),
+            Token::Semicolon,
+        ];
+
+        for (i, token) in test_tokens.iter().enumerate() {
+            
+            let next_token = lexer.next_token()?;
+            println!("{}: expected: {:?}, received: {:?}", i, token, next_token);
+            assert_eq!(token, &next_token);
+        }
+
+        return Ok(());
+    }
+
+
+    #[test]
+    fn test_if_statement() -> Result<()> {
+        let input = r#"
+        if (5 < 10) {
+        return true;
+        } else {
+        return false;
+        }
+        "#;
+
+        let mut lexer = Lexer::new(input.to_string());
+
+        let test_tokens = [
+            Token::If,
+            Token::LParen,
+            Token::Int("5".to_string()),
+            Token::Lt,
+            Token::Int("10".to_string()),
+            Token::RParen,
+            Token::LBrace,
+            Token::Return,
+            Token::True,
+            Token::Semicolon,
+            Token::RBrace,
+            Token::Else,
+            Token::LBrace,
+            Token::Return,
+            Token::False,
+            Token::Semicolon,
+            Token::RBrace
+        ];
+
+        for (i, token) in test_tokens.iter().enumerate() {
+            
+            let next_token = lexer.next_token()?;
+            println!("{}: expected: {:?}, received: {:?}", i, token, next_token);
+            assert_eq!(token, &next_token);
+        }
+
+        return Ok(());
+
     }
 
 }
