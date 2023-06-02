@@ -72,7 +72,7 @@ impl Lexer {
         return self.input[self.read_pos];
     }
 
-    fn next_token(&mut self) -> Result<Token> {
+    pub fn next_token(&mut self) -> Result<Token> {
         self.skip_whitespace();
 
         let token = match self.ch {

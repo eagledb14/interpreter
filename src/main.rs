@@ -1,6 +1,9 @@
 mod lexer;
+mod repl;
 
+use repl::*;
 
 fn main() {
-    println!("Hello, world!");
+    println!("Welcome to the Monkey repl!");
+    start();
 }
